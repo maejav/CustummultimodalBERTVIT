@@ -62,7 +62,7 @@ def seed_everything(seed):
 
 def load_data(args):
     
-    train_file = open(os.path.join(args.data_dir,'littestset.json'),)
+    train_file = open(os.path.join(args.data_dir,'data.json'),)
     test_file = open(os.path.join(args.data_dir,'data.json'),)
     # validation_file = open(os.path.join(args.data_dir,'validationset.json'),)
         
@@ -146,7 +146,7 @@ class LabelSmoothing(nn.Module):
             nll_loss = -logprobs * target
             nll_loss = nll_loss.sum(-1)
     
-            smooth_loss = -logprobs.mean(dim=-1)
+            smooth_loss = -logprobs.mean(dim=-1)  ### formul of crossEntropy LOSS
 
             loss = self.confidence * nll_loss + self.smoothing * smooth_loss
 
@@ -176,15 +176,23 @@ class VQAMed(Dataset): ### inheritance does not accure????
         path = self.df[idx,4]
         # print("path of df::::", path)
         if self.mode == "train":
-            print("We are in Train Mode\n")
+            # print("We are in Train Mode\n")
             question = self.df[idx, 7]
 
         elif self.mode == "test":
-            print("We are in Test Mode\n")
+            # print("We are in Test Mode\n")
             question = self.df[idx, 8]
-            # if question == "NA" or question == "NULL" or len(str(question))==0 or len(str(question))<=3:
-                # print("We have exception\n")
+            if question == "NA" or question == "NULL" or len(str(question))==0 or len(str(question))<=3:
+                print("We have exception\n")
                 # question = self.df[idx, 7]
+                question = "This is noise" 
+                ### meaningless sentence!!!
+                
+
+        else:
+            question = self.df[idx, 7]
+
+
 
 
         answer = self.df[idx, 12]

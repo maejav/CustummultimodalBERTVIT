@@ -747,9 +747,7 @@ class Transfer(nn.Module):
 
             modules21 = list(self.model2.children())[:]
             fix21 = nn.Sequential(*modules21)
-           
             v_21 = self.gap21(self.relu(self.conv21(fix21(img).view(img.size()[0],196,10,100)))).view(img.size()[0],-1)
-            # v_21 = z_gap
             v_2 = torch.add(v_2, v_21)
             
             modules3 = list(self.model1.children())[:-3] ### 3 ta laye be akhari 

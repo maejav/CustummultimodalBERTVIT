@@ -76,14 +76,12 @@ warnings.simplefilter("ignore", UserWarning)
 
 ### we should alt this 
 
-   
-    
 
 if __name__ == '__main__':
 #### maximize accuracy, minimize loss
     if cuda.empty_cache:
         cuda.empty_cache
-        print("Succseeful Empty cache\n")
+        print("Succseeful Empty cache")
     parser = argparse.ArgumentParser(description = "Finetune on VQARAD")
 
     # parser.add_argument('--category', type = str, required =False,default="all", help = "SPECIFIC run name")
@@ -91,25 +89,25 @@ if __name__ == '__main__':
     # parser.add_argument('--num_vis', type = int, required = False, default=5, help = "num of visual embeddings")
 
     parser.add_argument('--run_name', type = str, required = True, help = "SPECIFIC run name")
-    parser.add_argument('--data_dir', type = str, required = False, default = "../data/vqarad/", help = "path for data")
-    parser.add_argument('--model_dir', type = str, required = False, default = "../roco_mlm/recorder_520.pt", help = "path to load weights")
+    parser.add_argument('--data_dir', type = str, required = False, default = "../../MMBERT/data/vqarad/", help = "path for data")
+    parser.add_argument('--model_dir', type = str, required = False, default = "../pretrainrad/recorder_prevqaRAD30.pt", help = "path to load weights")
     
     # parser.add_argument('--model_dir', type = str, required = False, default = "/home/viraj.bagal/viraj/medvqa/Weights/roco_mlm/val_loss_3.pt", help = "path to load weights")
     parser.add_argument('--save_dir', type = str, required = False, default = "../VQAradSave/", help = "path to save weights")
     parser.add_argument('--question_type', type = str, required = False, default = None,  help = "choose specific category if you want")
-    parser.add_argument('--use_pretrained', action = 'store_true', default = False, help = "use pretrained weights or not")
+    parser.add_argument('--use_pretrained', action = 'store_true', default = True, help = "use pretrained weights or not")
     parser.add_argument('--mixed_precision', action = 'store_true', default = False, help = "use mixed precision or not")
     parser.add_argument('--clip', action = 'store_true', default = False, help = "clip the gradients or not")
 
     parser.add_argument('--seed', type = int, required = False, default = 42, help = "set seed for reproducibility")
-    parser.add_argument('--num_workers', type = int, required = False, default = 0, help = "number of workers")
+    parser.add_argument('--num_workers', type = int, required = False, default = 4, help = "number of workers")
     parser.add_argument('--epochs', type = int, required = False, default =200, help = "num epochs to train")
     parser.add_argument('--train_pct', type = float, required = False, default = 1.0, help = "fraction of train samples to select")
     parser.add_argument('--valid_pct', type = float, required = False, default = 1.0, help = "fraction of validation samples to select")
     parser.add_argument('--test_pct', type = float, required = False, default = 1.0, help = "fraction of test samples to select")
 
     parser.add_argument('--max_position_embeddings', type = int, required = False, default = 28, help = "max length of sequence")
-    parser.add_argument('--batch_size', type = int, required = False, default =4, help = "batch size")
+    parser.add_argument('--batch_size', type = int, required = False, default =1, help = "batch size")
     parser.add_argument('--lr', type = float, required = False, default = 1e-4, help = "learning rate'")
     # parser.add_argument('--weight_decay', type = float, required = False, default = 1e-2, help = " weight decay for gradients")
     parser.add_argument('--factor', type = float, required = False, default = 0.1, help = "factor for rlp")
@@ -133,7 +131,13 @@ if __name__ == '__main__':
     parser.add_argument('--n_layers', type = int, required = False, default = 4, help = "num of layers")
     parser.add_argument('--bert_model', type = str, required = False, default = "bert-base-uncased", help = "Name of Bert Model")
     parser.add_argument('--image_embedding', type = str, required = False, default = "hybrid", help = "Name of image extractor")
+    """
 
+    In BERT uncased, the text has been lowercased before WordPiece tokenization step 
+    while in BERT cased, the text is same as the input text (no changes). For example, 
+    if the input is "OpenGenus", then it is 
+    converted to "opengenus" for BERT uncased while BERT cased takes in "OpenGenus".
+    """
 
     args = parser.parse_args()
 
@@ -166,13 +170,14 @@ if __name__ == '__main__':
 
     args.num_classes = num_classes
 
-
+    print("Number of Classes in All data:",num_classes)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     model = Model(args)
     # print("3")
     if args.use_pretrained:
         model.load_state_dict(torch.load(args.model_dir))
+        print("Resume Pretrain\n")
     
     
     model.classifier[2] = nn.Linear(args.hidden_size, num_classes)
@@ -335,7 +340,8 @@ if __name__ == '__main__':
         else :
             print(f'Train loss: {(train_loss):.4f}, Train acc: {train_acc}')   
       
-      
+        torch.save(model.state_dict(),os.path.join(args.save_dir, f'{args.run_name}FINAL{last_epoch}_acc.pt'))
+
     torch.save(model.state_dict(),os.path.join(args.save_dir, f'{args.run_name}FINAL_acc.pt'))
 
    
