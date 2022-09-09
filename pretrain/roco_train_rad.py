@@ -31,12 +31,12 @@ if __name__ == '__main__':
     parser.add_argument('--mixed_precision', action='store_true', required = False, default = False,  help='mixed precision training or not')
     parser.add_argument('--resume', action='store_true', required = False, default = False,  help='resume training or train from scratch')
 
-    parser.add_argument('--batch_size', type=int, default=8, help='batch_size.')
+    parser.add_argument('--batch_size', type=int, default=1, help='batch_size.')
     parser.add_argument('--lr', type=float, default=2e-5, help='learning rate')
     parser.add_argument('--patience', type=int, default=5, help='rlp patience')
     parser.add_argument('--factor', type=float, default=0.1, help='rlp factor')
     parser.add_argument('--num_workers', type=int, default= 4, help='num works to generate data.')
-    parser.add_argument('--epochs', type=int, default=30, help='epochs to train')
+    parser.add_argument('--epochs', type=int, default=60, help='epochs to train')
 
     parser.add_argument('--train_pct', type=float, default=1, help='fraction of train set')
     parser.add_argument('--valid_pct', type=float, default=1, help='fraction of validation set')
@@ -46,11 +46,11 @@ if __name__ == '__main__':
     parser.add_argument('--n_layers', type=int, default=4, help='num of heads in multihead attenion')
     parser.add_argument('--heads', type=int, default=12, help='num of bertlayers')
     parser.add_argument('--type_vocab_size', type=int, default=2, help='types of tokens ')
-    parser.add_argument('--vocab_size', type=int, default=30522, help='vocabulary size')
+    parser.add_argument('--vocab_size', type=int, default=110000, help='vocabulary size')
     parser.add_argument('--hidden_size', type=int, default=768, help='embedding size')
     parser.add_argument('--hidden_dropout_prob', type=float, default=0.3, help='dropout')
     parser.add_argument('--image_embedding', type = str, required = False, default = "hybrid", help = "Name of image extractor")
-    parser.add_argument('--bert_model', type = str, required = False, default = "bert-base-uncased", help = "Name of Bert Model")
+    parser.add_argument('--bert_model', type = str, required = False, default = "bert-base-multilingual-uncased", help = "Name of Bert Model")
     # parser.add_argument('--num_vis', type = int, required = False,default=5, help = "num of visual embeddings")
     # parser.add_argument('--allcategory', type = str, required =False , default ="False" ,  help = "choose specific category if you want")
 

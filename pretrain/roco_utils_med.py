@@ -222,7 +222,7 @@ def train_one_epoch(loader, model, criterion, optimizer, scaler, device, args, e
 
 
         loss_func = criterion
-        print('loss_func',loss_func)
+        # print('loss_func',loss_func)
         optimizer.zero_grad()
 
         if args.mixed_precision:
@@ -235,10 +235,11 @@ def train_one_epoch(loader, model, criterion, optimizer, scaler, device, args, e
             (logits,_,_) = model(img, caption_token, segment_ids, attention_mask)
             # print("lllllllllllllllllllllllogits:",logits)
             logits = logits.log_softmax(-1)
-            print("lllllllllllllllllllllllogits:",logits.size())
-            print('targetttttttttttttttttttttttttttttt',target.size())
+            # print("lllllllllllllllllllllllogits:",logits.size())
+            # print('targetttttttttttttttttttttttttttttt',target.size())
             
-
+            name = f'{args.run_name}{(epoch+1)}intrain.pt'
+            torch.save(model.state_dict(), os.path.join(args.save_dir,name ))    
 
             loss = loss_func(logits.permute(0,2,1), target) 
             # print(loss) 
@@ -293,9 +294,9 @@ def train_one_epoch(loader, model, criterion, optimizer, scaler, device, args, e
         # acc = (pred == valid_labels).type(torch.float).mean() * 100.
         train_loss.append(loss_np)
         # bar.set_description('train_loss: %.5f, train_acc: %.2f' % (loss_np,"it is not important"))
-        content = f' Train loss: {(loss_np):.4f}'
+        # content = f' Train loss: {(loss_np):.4f}'
 
-        print(content)
+        # print(content)
         
 
         # wandb.log({'step_train_loss': loss_np,
@@ -414,7 +415,7 @@ class ROCO(Dataset):
         self.tfm = tfm
         self.keys = keys
         self.mode = mode
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        self.tokenizer = BertTokenizer.from_pretrained(args.bert_model)
         
     def __len__(self):
         return len(self.df)
@@ -619,7 +620,7 @@ class Transfer(nn.Module):
         if self.num_vis == 5:
 
 
-            if self.args.image_embedding == "vision":
+            if self.args.image_embedding == "hybrid":
 
                 self.model1 = models.resnet152(pretrained=True)
                 self.relu = nn.ReLU()
@@ -696,7 +697,7 @@ class Transfer(nn.Module):
 
         if self.num_vis == 5: 
 
-            if self.args.image_embedding == "vision":
+            if self.args.image_embedding == "hybrid":
             
                 modules2 = list(self.model1.children())[:-2]
                 fix2 = nn.Sequential(*modules2)
@@ -728,7 +729,7 @@ class Transfer(nn.Module):
                 z_relu=self.relu(z)
                 z_gap = self.gap31(z_relu)
                 v_31 = z_gap.view(img.size()[0],-1)
-                v_2 = torch.add(v_3, v_31)
+                v_3 = torch.add(v_3, v_31)
 
                 modules4 = list(self.model1.children())[:-4]
                 fix4 = nn.Sequential(*modules4)
@@ -922,7 +923,7 @@ class Transformer(nn.Module):
 #         self.blocks = BertLayer(args,share='none', norm='pre')
 #         self.n_layers = args.n_layers
 
-        base_model = BertModel.from_pretrained('bert-base-uncased')
+        base_model = BertModel.from_pretrained(args.bert_model)
         bert_model = nn.Sequential(*list(base_model.children())[0:])
         self.bert_embedding = bert_model[0]
         # self.embed = Embeddings(args)
@@ -987,4 +988,18 @@ class Model(nn.Module):
         pooled_h = self.activ1(self.fc1(h))
         logits = self.classifier(pooled_h)
         return logits,None,intermediate
-
+# Footer
+# © 2022 GitHub, Inc.
+# Footer navigation
+# Terms
+# Privacy
+# Security
+# Status
+# Docs
+# Contact GitHub
+# Pricing
+# API
+# Training
+# Blog
+# About
+# You have no unread notifications

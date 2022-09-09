@@ -416,7 +416,7 @@ class ROCO(Dataset):
         self.tfm = tfm
         self.keys = keys
         self.mode = mode
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        self.tokenizer = BertTokenizer.from_pretrained(args.bert_model)
         
     def __len__(self):
         return len(self.df)
@@ -747,7 +747,9 @@ class Transfer(nn.Module):
 
             modules21 = list(self.model2.children())[:]
             fix21 = nn.Sequential(*modules21)
+           
             v_21 = self.gap21(self.relu(self.conv21(fix21(img).view(img.size()[0],196,10,100)))).view(img.size()[0],-1)
+            # v_21 = z_gap
             v_2 = torch.add(v_2, v_21)
             
             modules3 = list(self.model1.children())[:-3] ### 3 ta laye be akhari 
@@ -759,7 +761,7 @@ class Transfer(nn.Module):
            
             z_gap = self.gap21(self.relu(self.conv21(fix31(img).view(img.size()[0],196,24,32))))
             v_31 = z_gap.view(img.size()[0],-1)
-            v_2 = torch.add(v_3, v_31)
+            v_3 = torch.add(v_3, v_31)
 
             modules4 = list(self.model1.children())[:-4]
             fix4 = nn.Sequential(*modules4)
@@ -790,7 +792,7 @@ class Transfer(nn.Module):
             inter_71 = self.conv21(fix71(img).view(img.size()[0],196,24,32))
             v_71 = self.gap21(self.relu(inter_71)).view(-1,self.args.hidden_size)
 
-            v_7 = torch.add(v_7, v_71)
+            v_7 = torch.add(v_7, v_71)   
 
             return v_2, v_3, v_4, v_5, v_7 
            
@@ -826,6 +828,7 @@ class MultiHeadedSelfAttention(nn.Module):
         self.drop = nn.Dropout(args.hidden_dropout_prob)
         self.scores = None
         self.n_heads = args.heads
+        
     def forward(self, x, mask):
         q, k, v = self.proj_q(x), self.proj_k(x), self.proj_v(x)
         q, k, v = (self.split_last(x, (self.n_heads, -1)).transpose(1, 2) for x in [q, k, v])
@@ -838,12 +841,15 @@ class MultiHeadedSelfAttention(nn.Module):
         h = self.merge_last(h, 2)
         self.scores = scores
         return h
+
     def split_last(self, x, shape):
         shape = list(shape)
         assert shape.count(-1) <= 1
         if -1 in shape:
             shape[shape.index(-1)] = int(x.size(-1) / -np.prod(shape))
         return x.view(*x.size()[:-1], *shape)
+
+
     def merge_last(self, x, n_dims):
         s = x.size()
         assert n_dims > 1 and n_dims < len(s)
@@ -910,7 +916,7 @@ class BertLayer(nn.Module):
 class Transformer(nn.Module):
     def __init__(self, args):
         super(Transformer,self).__init__()
-        base_model = BertModel.from_pretrained('bert-base-uncased')
+        base_model = BertModel.from_pretrained(args.bert_model)
         bert_model = nn.Sequential(*list(base_model.children())[0:])
         self.bert_embedding = bert_model[0]
 #         self.embed = Embeddings(args)
