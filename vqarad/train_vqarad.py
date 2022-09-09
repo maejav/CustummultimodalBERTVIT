@@ -89,8 +89,8 @@ if __name__ == '__main__':
     # parser.add_argument('--num_vis', type = int, required = False, default=5, help = "num of visual embeddings")
 
     parser.add_argument('--run_name', type = str, required = True, help = "SPECIFIC run name")
-    parser.add_argument('--data_dir', type = str, required = False, default = "../../MMBERT/data/vqarad/", help = "path for data")
-    parser.add_argument('--model_dir', type = str, required = False, default = "../pretrainrad/recorder_prevqaRAD30.pt", help = "path to load weights")
+    parser.add_argument('--data_dir', type = str, required = False, default = "../data/vqarad/", help = "path for data")
+    parser.add_argument('--model_dir', type = str, required = False, default = "../VQAradSave/PErsionrad3FINAL200_acc.pt", help = "path to load weights")
     
     # parser.add_argument('--model_dir', type = str, required = False, default = "/home/viraj.bagal/viraj/medvqa/Weights/roco_mlm/val_loss_3.pt", help = "path to load weights")
     parser.add_argument('--save_dir', type = str, required = False, default = "../VQAradSave/", help = "path to save weights")
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     parser.add_argument('--test_pct', type = float, required = False, default = 1.0, help = "fraction of test samples to select")
 
     parser.add_argument('--max_position_embeddings', type = int, required = False, default = 28, help = "max length of sequence")
-    parser.add_argument('--batch_size', type = int, required = False, default =1, help = "batch size")
+    parser.add_argument('--batch_size', type = int, required = False, default =4, help = "batch size")
     parser.add_argument('--lr', type = float, required = False, default = 1e-4, help = "learning rate'")
     # parser.add_argument('--weight_decay', type = float, required = False, default = 1e-2, help = " weight decay for gradients")
     parser.add_argument('--factor', type = float, required = False, default = 0.1, help = "factor for rlp")
@@ -125,11 +125,12 @@ if __name__ == '__main__':
 
     parser.add_argument('--image_size', type = int, required = False, default = 224, help = "image size")
     parser.add_argument('--hidden_size', type = int, required = False, default = 768, help = "hidden size")
-    parser.add_argument('--vocab_size', type = int, required = False, default = 30522, help = "vocab size")
+    parser.add_argument('--vocab_size', type = int, required = False, default = 510, help = "vocab size")
+    #### 119547
     parser.add_argument('--type_vocab_size', type = int, required = False, default = 2, help = "type vocab size")
     parser.add_argument('--heads', type = int, required = False, default = 12, help = "heads")
     parser.add_argument('--n_layers', type = int, required = False, default = 4, help = "num of layers")
-    parser.add_argument('--bert_model', type = str, required = False, default = "bert-base-uncased", help = "Name of Bert Model")
+    parser.add_argument('--bert_model', type = str, required = False, default = "bert-base-multilingual-uncased", help = "Name of Bert Model")
     parser.add_argument('--image_embedding', type = str, required = False, default = "hybrid", help = "Name of image extractor")
     """
 
@@ -178,8 +179,24 @@ if __name__ == '__main__':
     if args.use_pretrained:
         model.load_state_dict(torch.load(args.model_dir))
         print("Resume Pretrain\n")
+    # transformer
+    # fc1
+    # activ1
+    # classifier
+
     
-    
+    # for f in model.children():
+    #     print(f)
+    # layer_counter = 3
+    # for (name, module) in model.named_children():
+    #     print(name)
+    #     if name == 'features':
+    #         for layer in module.children():
+    #             for param in layer.parameters():
+    #                 param.requires_grad = False
+                
+    #             print('Layer "{}" in module "{}" was frozen!'.format(layer_counter, name))
+    #             layer_counter-=1
     model.classifier[2] = nn.Linear(args.hidden_size, num_classes)
         
     model.to(device) ### If you need to move a model to GPU via .cuda(),
@@ -346,7 +363,7 @@ if __name__ == '__main__':
 
    
 
-    df = pd.read_excel('OUTPUTrad.xlsx')
+    df = pd.read_excel('OUTPUTrad2.xlsx')
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
 
@@ -358,7 +375,7 @@ if __name__ == '__main__':
         ignore_index = True)
     # ["model2",args.bert_model ,args.epochs, args.lr, train_loss,train_acc["total_acc"]]
 
-    df.to_excel("OUTPUTrad.xlsx") 
+    df.to_excel("OUTPUTrad2.xlsx") 
     
     with open(f'recorder{args.run_name}.txt', 'w') as fp:
         for item in log_dict:

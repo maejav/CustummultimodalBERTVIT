@@ -1,41 +1,42 @@
 import argparse
-import pwd
-from xmlrpc.client import boolean
+# import pwd
+# from xmlrpc.client import boolean
 from utils import seed_everything, Model, VQAMed, train_one_epoch, validate, test, load_data, LabelSmoothing, train_img_only, val_img_only, test_img_only
 import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
-from torchvision import transforms, models
+from torchvision import transforms
 from torch.cuda.amp import GradScaler
 import os
 import warnings
-import albumentations as A
-import pretrainedmodels
-from albumentations.core.composition import OneOf
-from albumentations.pytorch.transforms import ToTensorV2
-import timm
+# import albumentations as A
+# import pretrainedmodels
+# from albumentations.core.composition import OneOf
+# from albumentations.pytorch.transforms import ToTensorV2
+# import timm
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 warnings.simplefilter("ignore", UserWarning)
 
 if __name__ == '__main__':
-    
+    # if torch.cuda.empty_cache:
+    #     print("Empty cache")
     parser = argparse.ArgumentParser(description = "Finetune on ImageClef 2019")
 
     parser.add_argument('--run_name', type = str, required = True, help = "run name for wandb")
 
 
-    parser.add_argument('--data_dir', type = str, required = False, default = "../data/vqamed", help = "path for data")
+    parser.add_argument('--data_dir', type = str, required = False, default = "../../MMBERT/data/vqamed", help = "path for data")
     
-    parser.add_argument('--model_dir', type = str, required = False, default = "../VQAmedSave/recorderpremedabnormalityresume30FINAL_acc.pt", help = "path to load weights")
+    parser.add_argument('--model_dir', type = str, required = False, default = "../VQAmedSave/recorder_lllllllllllaastmulti30.pt", help = "path to load weights")
     parser.add_argument('--save_dir', type = str, required = False, default = "../VQAmedSave/", help = "path to save weights")
-    parser.add_argument('--category', type =str, required = False, default ="Abnormality",  help = "choose specific category if you want")
+    parser.add_argument('--category', type =str, required = False, default = "all", help = "choose specific category if you want")
     parser.add_argument('--use_pretrained', action = 'store_true', default = True, help = "use pretrained weights or not")
-    parser.add_argument('--mixed_precision', action = 'store_true', default = True, help = "use mixed precision or not")
+    parser.add_argument('--mixed_precision', action = 'store_true', default = False, help = "use mixed precision or not")
     parser.add_argument('--clip', action = 'store_true', default = False, help = "clip the gradients or not")
 
     parser.add_argument('--seed', type = int, required = False, default = 42, help = "set seed for reproducibility")
@@ -46,26 +47,26 @@ if __name__ == '__main__':
     parser.add_argument('--test_pct', type = float, required = False, default = 1, help = "fraction of test samples to select")
 
     parser.add_argument('--max_position_embeddings', type = int, required = False, default = 28, help = "max length of sequence")
-    parser.add_argument('--batch_size', type = int, required = False, default = 8 , help = "batch size")
-    parser.add_argument('--lr', type = float, required = False, default = 1e-3, help = "learning rate'")
+    parser.add_argument('--batch_size', type = int, required = False, default =24 , help = "batch size")
+    parser.add_argument('--lr', type = float, required = False, default = 1e-4, help = "learning rate'")
     # parser.add_argument('--weight_decay', type = float, required = False, default = 1e-2, help = " weight decay for gradients")
     parser.add_argument('--factor', type = float, required = False, default = 0.1, help = "factor for rlp")
-    parser.add_argument('--patience', type = int, required = False, default = 20, help = "patience for rlp")
+    parser.add_argument('--patience', type = int, required = False, default = 5, help = "patience for rlp")
     # parser.add_argument('--lr_min', type = float, required = False, default = 1e-6, help = "minimum lr for Cosine Annealing")
-    parser.add_argument('--hidden_dropout_prob', type = float, required = False, default = 0, help = "hidden dropout probability")
-    parser.add_argument('--smoothing', type = float, required = False, default =0.001, help = "label smoothing")
+    parser.add_argument('--hidden_dropout_prob', type = float, required = False, default = 0.3, help = "hidden dropout probability")
+    parser.add_argument('--smoothing', type = float, required = False, default =None, help = "label smoothing")
 
     parser.add_argument('--image_size', type = int, required = False, default = 224, help = "image size")
     parser.add_argument('--hidden_size', type = int, required = False, default = 768, help = "hidden size")
-    parser.add_argument('--vocab_size', type = int, required = False, default = 1671, help = "vocab size")
+    parser.add_argument('--vocab_size', type = int, required = False, default = 119547, help = "vocab size")
     parser.add_argument('--type_vocab_size', type = int, required = False, default = 2, help = "type vocab size")
     parser.add_argument('--heads', type = int, required = False, default = 12, help = "heads")
     parser.add_argument('--n_layers', type = int, required = False, default= 4, help = "num of layers")
     parser.add_argument('--num_vis', type = int, required = False, default=5, help = "num of visual embeddings")
     # parser.add_argument('--all_category', type =boolean, required= False, help = "yes or no category")
-    parser.add_argument('--image_embedding', type = str, required = False, default = "vision", help = "Name of image extractor")
-    parser.add_argument('--bert_model', type = str, required = False, default = "bert-base-uncased", help = "Name of Bert Model")
-    # parser.add_argument('--allcategory', type =boolean, required =False , default =False ,  help = "choose specific category if you want")
+    parser.add_argument('--image_embedding', type = str, required = False, default = "hybrid", help = "Name of image extractor")
+    parser.add_argument('--bert_model', type = str, required = False, default = "bert-base-multilingual-uncased", help = "Name of Bert Model")
+    # parser.add_argument('--allcategory', type =boolean, required =False , default =Falsfde ,  help = "choose specific category if you want")
     parser.add_argument('--allcategory', type = str, required =False , default ="False" ,  help = "choose specific category if you want")
 
 
@@ -75,6 +76,11 @@ if __name__ == '__main__':
 
     # if  args.category==None:
     train_df, val_df, test_df = load_data(args)
+    print("TTTTTTTTTTTTTTTRAinnnnnnn\n", len(train_df))
+    print("vvvvvvvvvvvvvvvvvvvvvvvv\n", len(val_df))
+    print("sssssssssssssssssss\n", len(test_df))
+    print("args.hidden_prob::::::::              ",args.hidden_dropout_prob)
+
 
     # else:
 
@@ -102,7 +108,7 @@ if __name__ == '__main__':
     # val_df = val_df[val_df['answer'].isin(['yes', 'no'])]
     # test_df = test_df[test_df['answer'].isin(['yes', 'no'])]
 
-
+    print("Category::::",args.category)
     df = pd.concat([train_df, val_df, test_df]).reset_index(drop=True)
 
     # print("TTTTTTTTTTTTTTTRAinnnnnnn\n", train_df)
@@ -112,14 +118,16 @@ if __name__ == '__main__':
     ans2idx = {ans:idx for idx,ans in enumerate(df['answer'].unique())}
     idx2ans = {idx:ans for ans,idx in ans2idx.items()}
     df['answer'] = df['answer'].map(ans2idx).astype(int)
+
     train_df = df[df['mode']=='train'].reset_index(drop=True)
-    val_df = df[df['mode']=='eval'].reset_index(drop=True)
+    val_df = df[df['mode']=='val'].reset_index(drop=True)
     test_df = df[df['mode']=='test'].reset_index(drop=True) ## with lower 
 
     num_classes = len(ans2idx)
 
     args.num_classes = num_classes
-    print("number of class\n ",num_classes)
+    print("number of class indicate the complicated problem or not\n ",num_classes)
+    # print("")
 
 
 
@@ -132,7 +140,7 @@ if __name__ == '__main__':
         model.load_state_dict(torch.load(args.model_dir))
 
 
-    # model.classifier[2] = nn.Linear(args.hidden_size, num_classes)
+    model.classifier[2] = nn.Linear(args.hidden_size, num_classes)
 
 
         
@@ -152,7 +160,7 @@ if __name__ == '__main__':
 
     scaler = GradScaler()
 ### transformation on images 
-    if args.image_embedding == "vision":
+    if args.image_embedding == "hybrid":
         train_tfm = transforms.Compose([transforms.ToPILImage(),
             transforms.Resize(256, interpolation=3),
             transforms.CenterCrop(224),
@@ -200,15 +208,20 @@ if __name__ == '__main__':
     print("sssssssssssssssssss\n", len(test_df))
 
 
+    print("TTTTTTTTTTTTTTTRAinnnnnnn\n", train_df)
+    print("vvvvvvvvvvvvvvvvvvvvvvvv\n", val_df)
+    print("sssssssssssssssssss\n", test_df)
+
+
     traindataset = VQAMed(train_df, imgsize = args.image_size, tfm = train_tfm, args = args)
     valdataset = VQAMed(val_df, imgsize = args.image_size, tfm = val_tfm, args = args)
     testdataset = VQAMed(test_df, imgsize = args.image_size, tfm = test_tfm, args = args)
 
     trainloader = DataLoader(traindataset, batch_size = args.batch_size, shuffle=True, num_workers = args.num_workers)
-    valloader = DataLoader(valdataset, batch_size = args.batch_size, shuffle=False, num_workers = args.num_workers)
-    testloader = DataLoader(testdataset, batch_size = args.batch_size, shuffle=False, num_workers = args.num_workers)
+    valloader = DataLoader(valdataset, batch_size = args.batch_size, shuffle=True, num_workers = args.num_workers)
+    testloader = DataLoader(testdataset, batch_size = args.batch_size, shuffle=True, num_workers = args.num_workers)
 
-    best_acc1 = 0
+    best_acc1 = 60
     best_acc2 = 0
     best_loss = np.inf
     counter = 0
@@ -233,47 +246,13 @@ if __name__ == '__main__':
         if epoch == 200:
             args.lr=1e-4
         train_loss, preddddict , train_acc, _, _ = train_one_epoch(trainloader, model, optimizer, criterion, device, scaler, args, idx2ans)
-        test_loss, predictions, acc, bleu = test(testloader, model, criterion, device, scaler, args, test_df,idx2ans)
         logdict.append({"trainloss":train_loss})
         logdict.append({"trainacc":train_acc})
-
-        logdict.append({"testloss":test_loss})
-        logdict.append({"testacc",acc})
-        logdict.append({"testbleu",bleu})
-        
         all_train_loss.append(train_loss)
         all_train_acc.append(train_acc)
-        all_test_loss.append(test_loss)
-        
-        
-        # print("train_loss" , train_loss)
-        
-
-        # scheduler.step(train_loss)
 
 
-        if  args.category == "all": ### false
-            all_test_acc.append(acc["total_acc"])
-            all_test_bleu.append(bleu["total_bleu"])
-            # for k,v in bleu.items():
-            #     log_dict[k] = v
-
-            # log_dict['train_loss'] = train_loss
-            # log_dict['test_loss'] = test_loss
-            # log_dict['learning_rate'] = optimizer.param_groups[0]["lr"]
-
-            # log_dict = acc
-        else :
-            print("we are in specific category")
-            all_test_acc.append(acc)
-            all_test_bleu.append(bleu)
-
-
-          
-
-
-            # print(log_dict)
-        if (epoch % 5) == 0 :
+        if (True) :
             # print(type(epoch))
             # print(epoch)
             # print ("baghimandeh:",(epoch % 5))
@@ -285,9 +264,38 @@ if __name__ == '__main__':
             logdict.append({"valloss":val_loss})
             logdict.append({"valacc":val_acc})
             logdict.append({"valbleu":val_bleu})
-            current_loss=val_loss
             all_val_loss.append(val_loss)
             # all_val_bleu.append(val_bleu)
+        
+            scheduler.step(val_loss)
+
+            if  args.category== "all":
+
+                if val_acc['val_total_acc'] > best_acc1:
+                    torch.save(model.state_dict(),os.path.join(args.save_dir, f'{args.run_name}BESTVALALL{args.category}.pt'))
+                    best_acc1=val_acc['val_total_acc']
+
+            else:
+
+                if val_acc > best_acc1:
+                    print('Saving model')
+                    torch.save(model.state_dict(),os.path.join(args.save_dir, f'{args.run_name}BESTVAL{args.category}.pt'))
+                    best_acc1 = val_acc 
+        if args.category =="all":
+            val_acc=val_acc['val_total_acc']
+
+
+        if  (True):
+
+            test_loss, predictions, acc, bleu = test(testloader, model, criterion, device, scaler, args, test_df,idx2ans)
+
+            logdict.append({"testloss":test_loss})
+            logdict.append({"testacc":acc})
+            logdict.append({"testbleu":bleu})
+        
+            all_test_loss.append(test_loss)
+            current_loss=test_loss
+
             if current_loss > last_loss:
                 trigger_times += 1
                 print('Trigger Times:', trigger_times)
@@ -301,27 +309,42 @@ if __name__ == '__main__':
                 print('trigger times: 0')
                 trigger_times = 0
 
-            last_loss = current_loss
+            last_loss = current_loss  
 
-            scheduler.step(val_loss)
 
-            if  args.category== "all":
+            if  args.category == "all": ### false
+                all_test_acc.append(acc["total_acc"])
+                all_test_bleu.append(bleu["total_bleu"])
+                # for k,v in bleu.items():
+                #     log_dict[k] = v
 
-                if val_acc['val_total_acc'] > best_acc1:
-                    torch.save(model.state_dict(),os.path.join(args.save_dir, f'{args.run_name}_acc.pt'))
-                    best_acc1=val_acc['val_total_acc']
+                # log_dict['train_loss'] = train_loss
+                # log_dict['test_loss'] = test_loss
+                # log_dict['learning_rate'] = optimizer.param_groups[0]["lr"]
 
-            else:
+                # log_dict = acc
+            else :
+                print("we are in specific category")
+                all_test_acc.append(acc)
+                all_test_bleu.append(bleu)
 
-                if val_acc > best_acc1:
-                    print('Saving model')
-                    torch.save(model.state_dict(),os.path.join(args.save_dir, f'recorder{args.run_name}_acc.pt'))
-                    best_acc1 = val_acc 
+
+          
+
+
+            # print(log_dict)
+        
+
+        
+
+        print("EEEEEEPOOOOOCHH:",epoch)
+        print("Last loss in Test:",all_test_acc[-2:])
+        torch.save(model.state_dict(),os.path.join(args.save_dir, f'{args.run_name}FINAL{last_epoch}.pt'))
+    
     # epoo = [epoch+1 for epoch in range(args.epochs)]
-   
-    torch.save(model.state_dict(),os.path.join(args.save_dir, f'recorder{args.run_name}FINAL_acc.pt'))
+    torch.save(model.state_dict(),os.path.join(args.save_dir, f'{args.run_name}FINAL.pt'))
 
-    df = pd.read_excel('output_train.xlsx')
+    df = pd.read_excel('OUTPUTmed2.xlsx')
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
 
@@ -330,7 +353,7 @@ if __name__ == '__main__':
         'image_embedding':args.image_embedding,\
         'epoch' : last_epoch, "lr" : args.lr, "loss_train":all_train_loss, "overall_accuracy_train" :all_train_acc, "loss_val":all_val_loss,"loss_test":all_test_loss, "overall_accuracy_test": all_test_acc,"all_test_bleu":all_test_bleu, "category":args.category}, ignore_index = True)
     # ["model2",args.bert_model ,args.epochs, args.lr, train_loss,train_acc["total_acc"]]
-    df.to_excel("output_train.xlsx") 
+    df.to_excel("OUTPUTmed2.xlsx") 
     with open(f'recorder{args.run_name}.txt', 'w') as fp:
         for item in logdict:
             # write each item on a new line

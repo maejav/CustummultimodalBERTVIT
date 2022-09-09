@@ -68,12 +68,12 @@ def load_data(args, remove = None):
     testdf = pd.read_csv(os.path.join(args.data_dir, 'testdf.csv'))
     testdf = testdf.loc[:, ~testdf.columns.str.contains('^Unnamed')]
     testdf['img_id'] = testdf['img_id'].apply(lambda x: os.path.join(args.data_dir, 'ImageClef-2019-VQA-Med-Test/VQAMed2019_Test_Images', x + '.jpg'))
-
-
+    
     if args.category == "all" :
         # print(os.getcwd())
         traindf = pd.read_csv(os.path.join(args.data_dir, 'traindf.csv'))
         valdf = pd.read_csv(os.path.join(args.data_dir, 'valdf.csv'))
+        valdf["mode"]="val"
 
         traindf = traindf.loc[:, ~traindf.columns.str.contains('^Unnamed')]
         valdf = valdf.loc[:, ~valdf.columns.str.contains('^Unnamed')]
@@ -87,7 +87,7 @@ def load_data(args, remove = None):
         valdf['img_id'] = valdf['img_id'].apply(lambda x: os.path.join(args.data_dir, 'ImageClef-2019-VQA-Med-Validation/Val_images', x + '.jpg'))
 
     else:
-        # print("goooooooooooooooooo")
+        print("goooooooooooooooooo")
         l= (os.path.join(args.data_dir, 'ImageClef-2019-VQA-Med-Training/QAPairsByCategory/'))
         paths= os.listdir(l)
         for path in paths:
@@ -108,7 +108,7 @@ def load_data(args, remove = None):
                 valdf= pd.read_csv(f"{l}/{path}", sep="|", header=None, names=["img_id", "question","answer"])
                 valdf["category"]=args.category.lower()
                 
-                valdf["mode"]="eval"
+                valdf["mode"]="val"
                 break
         valdf['img_id'] = valdf['img_id'].apply(lambda x: os.path.join(args.data_dir, 'ImageClef-2019-VQA-Med-Validation/Val_images', x + '.jpg'))
         when= testdf['category']== args.category.lower() 
@@ -131,9 +131,24 @@ def load_data(args, remove = None):
     traindf = traindf.sample(frac = args.train_pct)
     valdf = valdf.sample(frac = args.valid_pct)
     testdf = testdf.sample(frac = args.test_pct)
-    # print("tttttttttttttttt\n",traindf.head())
-    # print("tttttttttttttttt\n",valdf.head())
-    # print("tttttttttttttttt\n",testdf.head())
+    testdf=testdf.iloc[:, [0,2,3,1,4]]
+    print("columnsss",traindf.columns)
+
+    print("columnsss",testdf.columns)
+    items=list(testdf.iloc[:,2].str.split('#'))[0:]
+    print("yyyyyyyyyyyyyyyyyyyyy",list(testdf.iloc[:,2].str.split('#'))[0:])
+    i=0
+    for item in items:
+        testdf.iloc[i,2]=item[0]
+        i=i+1
+    # try :
+    # testdf.iloc[:,2]=list(testdf.iloc[:,2].str.split('#'))[0:][0:0]
+    print("we could TRRRRRRRRRRRRRRRRRRRRRy")   
+    # except:
+    #     print("cccccccccccccccccccccccccccccccc")
+    print("tttttttttttttttt\n",traindf.head())
+    print("tttttttttttttttt\n",valdf.head())
+    print("tttttttttttttttt\n",testdf.head())
     
     return traindf, valdf, testdf
 
@@ -225,7 +240,7 @@ class VQAMed(Dataset):
  
         answer = self.df.loc[idx, 'answer']
 
-        if self.mode == 'eval':
+        if self.mode == 'val':
             tok_ques = self.tokenizer.tokenize(question)
 
         if self.args.smoothing:
@@ -360,7 +375,7 @@ class Transfer(nn.Module):
         if self.num_vis == 5:
 
 
-            if self.args.image_embedding == "vision":
+            if self.args.image_embedding == "hybrid":
 
                 self.model1 = models.resnet152(pretrained=True)
                 self.relu = nn.ReLU()
@@ -436,21 +451,16 @@ class Transfer(nn.Module):
 
         if self.num_vis == 5: 
 
-            if self.args.image_embedding == "vision":
+            if self.args.image_embedding == "hybrid":
                 
-                modules2 = list(self.model1.children())[:-2]
+                modules2 = list(self.model1.children())[:-2]  #### specific feature 
                 fix2 = nn.Sequential(*modules2)
                 inter_2 = self.conv2(fix2(img))
                 v_2 = self.gap2(self.relu(inter_2)).view(-1,self.args.hidden_size)
 
-                modules21 = list(self.model2.children())[:]
+                modules21 = list(self.model2.children())[:]  ### specific feature with considering attention
                 fix21 = nn.Sequential(*modules21)
-                z=fix21(img)
-                z=z.view(img.size()[0],196,10,100)
-                z=self.conv21(z)
-                inter_21=z
-                z_relu=self.relu(z)
-                z_gap = self.gap21(z_relu)
+                z_gap = self.gap21(self.relu(self.conv21(fix21(img).view(img.size()[0],196,10,100))))
                 v_21 = z_gap.view(img.size()[0],-1)
                 v_2 = torch.add(v_2, v_21)
                 
@@ -461,14 +471,10 @@ class Transfer(nn.Module):
 
                 modules31 = list(self.model2.children())[:-1]
                 fix31 = nn.Sequential(*modules31)
-                z=fix31(img)
-                z=z.view(img.size()[0],196,24,32)
-                z=self.conv31(z)
-                inter_31=z
-                z_relu=self.relu(z)
-                z_gap = self.gap31(z_relu)
+                z_relu=self.relu(self.conv21(fix31(img).view(img.size()[0],196,24,32)))
+                z_gap = self.gap21(z_relu)
                 v_31 = z_gap.view(img.size()[0],-1)
-                v_2 = torch.add(v_3, v_31)
+                v_3 = torch.add(v_3, v_31)
 
                 modules4 = list(self.model1.children())[:-4]
                 fix4 = nn.Sequential(*modules4)
@@ -477,8 +483,8 @@ class Transfer(nn.Module):
 
                 modules41 = list(self.model2.children())[:-2]
                 fix41 = nn.Sequential(*modules41)
-                inter_41 = self.conv41(fix41(img).view(img.size()[0],196,24,32))
-                v_41 = self.gap41(self.relu(inter_41)).view(-1,self.args.hidden_size)
+                inter_41 = self.conv21(fix41(img).view(img.size()[0],196,24,32))
+                v_41 = self.gap21(self.relu(inter_41)).view(-1,self.args.hidden_size)
                 v_4 = torch.add(v_4, v_41)
 
                 modules5 = list(self.model1.children())[:-5]
@@ -487,22 +493,23 @@ class Transfer(nn.Module):
                 v_5 = self.gap5(self.relu(inter_5)).view(-1,self.args.hidden_size)
 
                 modules51 = list(self.model2.children())[:-3]
-                fix51 = nn.Sequential(*modules5)
-                inter_51 = self.conv51(fix51(img).view(img.size()[0],196,-1,32))
-                v_51 = self.gap51(self.relu(inter_51)).view(-1,self.args.hidden_size)
+                fix51 = nn.Sequential(*modules51)
+                inter_51 = self.conv21(fix51(img).view(img.size()[0],196,-1,32))
+                v_51 = self.gap21(self.relu(inter_51)).view(-1,self.args.hidden_size)
                 v_5 = torch.add(v_5, v_51)
 
-                modules7 = list(self.model1.children())[:-7]
+                modules7 = list(self.model1.children())[:-7]  ### General
                 fix7 = nn.Sequential(*modules7)
                 inter_7 = self.conv7(fix7(img))
                 v_7 = self.gap7(self.relu(inter_7)).view(-1,self.args.hidden_size)
 
                 modules71 = list(self.model2.children())[:-4]
                 fix71 = nn.Sequential(*modules71)
-                inter_71 = self.conv71(fix71(img).view(img.size()[0],196,24,32))
+                inter_71 = self.conv21(fix71(img).view(img.size()[0],196,24,32))
+                v_71 = self.gap21(self.relu(inter_71)).view(-1,self.args.hidden_size)
 
-                v_71 = self.gap71(self.relu(inter_71)).view(-1,self.args.hidden_size)
                 v_7 = torch.add(v_7, v_71)
+
                 return v_2, v_3, v_4, v_5, v_7, [inter_2.mean(1), inter_3.mean(1), inter_4.mean(1), inter_5.mean(1), inter_7.mean(1)]
 
                 # return v_2, v_3, v_4, v_5, v_7,[inter_2.mean(1)+inter_21.mean(1), inter_3.mean(1)+inter_31.mean(1), inter_4.mean(1)+inter_41.mean(1), inter_5.mean(1)+inter_51.mean(1), inter_7.mean(1)+inter_71.mean(1)]
@@ -651,7 +658,7 @@ class BertLayer(nn.Module):
 class Transformer(nn.Module):
     def __init__(self, args):
         super(Transformer,self).__init__()
-        base_model = BertModel.from_pretrained('bert-base-uncased')
+        base_model = BertModel.from_pretrained(args.bert_model)
         bert_model = nn.Sequential(*list(base_model.children())[0:])
         self.bert_embedding = bert_model[0]
         # self.embed = Embeddings(args)

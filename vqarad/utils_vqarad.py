@@ -62,8 +62,8 @@ def seed_everything(seed):
 
 def load_data(args):
     
-    train_file = open(os.path.join(args.data_dir,'data.json'),)
-    test_file = open(os.path.join(args.data_dir,'data.json'),)
+    train_file = open(os.path.join(args.data_dir,'trainset.json'),)
+    test_file = open(os.path.join(args.data_dir,'testset.json'),)
     # validation_file = open(os.path.join(args.data_dir,'validationset.json'),)
         
     # train_file = open(os.path.join(args.data_dir,'littrainset.json'),)
@@ -397,7 +397,7 @@ class Transfer(nn.Module):
            
             z_gap = self.gap21(self.relu(self.conv21(fix31(img).view(img.size()[0],196,24,32))))
             v_31 = z_gap.view(img.size()[0],-1)
-            v_2 = torch.add(v_3, v_31)
+            v_3 = torch.add(v_3, v_31)
 
             modules4 = list(self.model1.children())[:-4]
             fix4 = nn.Sequential(*modules4)
@@ -714,11 +714,13 @@ def train_one_epoch(loader, model, optimizer, criterion, device, scaler, args, t
     TARGETS = torch.cat(TARGETS).cpu().numpy()
 
     total_acc = (PREDS == TARGETS).mean() * 100.
-    closed_acc = (PREDS[train_df['answer_type']=='CLOSED'] == TARGETS[train_df['answer_type']=='CLOSED']).mean() * 100.
-    open_acc = (PREDS[train_df['answer_type']=='OPEN'] == TARGETS[train_df['answer_type']=='OPEN']).mean() * 100.
+    # closed_acc = (PREDS[train_df['answer_type']=='CLOSED'] == TARGETS[train_df['answer_type']=='CLOSED']).mean() * 100.
+    # open_acc = (PREDS[train_df['answer_type']=='OPEN'] == TARGETS[train_df['answer_type']=='OPEN']).mean() * 100.
 
-    acc = {'total_acc': np.round(total_acc, 4), 'closed_acc': np.round(closed_acc, 4),\
-    'open_acc': np.round(open_acc, 4)}
+    # acc = {'total_acc': np.round(total_acc, 4), 'closed_acc': np.round(closed_acc, 4),\
+    # 'open_acc': np.round(open_acc, 4)}
+
+    acc = {'total_acc': np.round(total_acc, 4)}
 
 
     return np.mean(train_loss), acc  ### it is important what is returning 
